@@ -213,10 +213,10 @@ export default function App(): JSX.Element {
           .idempotency_key)
       : undefined;
 
-  const events = Array.isArray(eventsState.data)
+  const events: unknown[] = Array.isArray(eventsState.data)
     ? eventsState.data
     : Array.isArray((eventsState.data as { events?: unknown[] } | undefined)?.events)
-    ? (eventsState.data as { events?: unknown[] }).events
+    ? (eventsState.data as { events?: unknown[] }).events ?? []
     : [];
 
   async function copyToClipboard(label: string, value: string): Promise<void> {
@@ -457,7 +457,8 @@ export default function App(): JSX.Element {
               </table>
             </div>
 
-            {expandedRowIndex !== null && events[expandedRowIndex] && (
+            {expandedRowIndex !== null &&
+              events[expandedRowIndex] !== undefined && (
               <div className="json-block">
                 <div className="json-header">
                   <strong>Event Details</strong>
