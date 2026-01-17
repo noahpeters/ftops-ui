@@ -1,0 +1,316 @@
+:root {
+  color: #1b1b1b;
+  background: #f6f5f2;
+  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+  line-height: 1.4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+h1 {
+  margin: 0 0 4px;
+  font-size: 28px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+h3 {
+  margin-top: 0;
+}
+
+p {
+  margin: 0;
+  color: #4d4d4d;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.tabs button {
+  border: 1px solid #b8b8b8;
+  background: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  background: #1b1b1b;
+  color: #fff;
+  border-color: #1b1b1b;
+}
+
+.panel {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.form-row input,
+.form-grid input,
+textarea {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #c8c8c8;
+  font-size: 14px;
+}
+
+textarea {
+  font-family: "Source Code Pro", "Courier New", monospace;
+}
+
+.example-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.example-row button {
+  background: #f0f0f0;
+  border: 1px solid #c8c8c8;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  border: none;
+  background: #1b1b1b;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.url-hint {
+  font-size: 12px;
+  color: #666;
+  word-break: break-all;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 14px;
+}
+
+.error {
+  background: #ffe6e6;
+  border: 1px solid #f5b3b3;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #7a1c1c;
+}
+
+.highlight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f7f6ef;
+  border: 1px solid #e2dfc6;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.highlight.warning {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.highlight button {
+  background: #fff;
+  border: 1px solid #b8b8b8;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.json-block {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.json-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.json-header button {
+  border: 1px solid #b8b8b8;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.json-view {
+  font-family: "Source Code Pro", "Courier New", monospace;
+  font-size: 13px;
+}
+
+.json-children {
+  margin-left: 16px;
+  border-left: 1px dashed #d2d2d2;
+  padding-left: 12px;
+}
+
+.json-row {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.json-key {
+  color: #0c4b6e;
+  min-width: 120px;
+}
+
+.json-sep {
+  color: #999;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+thead {
+  background: #f4f4f4;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e6e6e6;
+  white-space: nowrap;
+}
+
+tr.expanded {
+  background: #fff8e1;
+}
+
+tr:hover {
+  background: #f9f9f9;
+}
+
+.empty {
+  text-align: center;
+  padding: 16px 10px;
+  color: #777;
+}
+
+.divider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 24px 0;
+}
+
+.panel-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+label.full {
+  width: 100%;
+}
+
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: "Source Code Pro", "Courier New", monospace;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .app {
+    padding: 20px 14px 60px;
+  }
+
+  .actions {
+    align-items: stretch;
+  }
+
+  .json-key {
+    min-width: 80px;
+  }
+}
