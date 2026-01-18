@@ -207,17 +207,11 @@ export function WorkspacesPanel({
             <div className="form-grid">
               <div className="form-row">
                 <label>Slug</label>
-                <input
-                  value={editSlug}
-                  onChange={(event) => setEditSlug(event.target.value)}
-                />
+                <input value={editSlug} onChange={(event) => setEditSlug(event.target.value)} />
               </div>
               <div className="form-row">
                 <label>Name</label>
-                <input
-                  value={editName}
-                  onChange={(event) => setEditName(event.target.value)}
-                />
+                <input value={editName} onChange={(event) => setEditName(event.target.value)} />
               </div>
             </div>
             <div className="actions">

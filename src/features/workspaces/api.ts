@@ -5,6 +5,7 @@ export type WorkspaceRow = {
   slug?: string | null;
   name: string;
   created_at?: string | null;
+  updated_at?: string | null;
 };
 
 export async function listWorkspaces() {
@@ -19,10 +20,7 @@ export async function createWorkspace(body: { slug: string; name: string }) {
   });
 }
 
-export async function updateWorkspace(
-  id: string,
-  body: { slug?: string; name?: string }
-) {
+export async function updateWorkspace(id: string, body: { slug?: string; name?: string }) {
   return fetchJson<WorkspaceRow>(buildUrl(`/workspaces/${id}`), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

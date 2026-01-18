@@ -23,11 +23,7 @@ export type CommercialRecordDetail = {
   line_items: Record<string, unknown>[];
 };
 
-export function listCommercialRecords(params: {
-  limit?: number;
-  offset?: number;
-  query?: string;
-}) {
+export function listCommercialRecords(params: { limit?: number; offset?: number; query?: string }) {
   return fetchJson<CommercialRecordsResponse>(
     buildUrl("/commercial-records", {
       limit: params.limit,

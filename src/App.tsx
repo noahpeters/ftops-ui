@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildUrl, fetchJson } from "./lib/api";
 import { DevMigrationBanner } from "./components/DevMigrationBanner";
 import { JsonView } from "./components/JsonView";
@@ -14,11 +14,7 @@ import { listWorkspaces, type WorkspaceRow } from "./features/workspaces/api";
 import { WorkspacesPanel } from "./features/workspaces/WorkspacesPanel";
 import "./index.css";
 
-const EXAMPLE_URIS = [
-  "manual://proposal/demo",
-  "shopify://order/example",
-  "qbo://invoice/example",
-];
+const EXAMPLE_URIS = ["manual://proposal/demo", "shopify://order/example", "qbo://invoice/example"];
 
 const TAB_STORAGE_KEY = "ftops-ui:tab";
 const RECORD_URI_STORAGE_KEY = "ftops-ui:record-uri";
@@ -69,9 +65,7 @@ export default function App(): JSX.Element {
 
   const [previewState, setPreviewState] = useState<PlanPreviewState>({});
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [materializeMessage, setMaterializeMessage] = useState<string | null>(
-    null
-  );
+  const [materializeMessage, setMaterializeMessage] = useState<string | null>(null);
   const [materializeLoading, setMaterializeLoading] = useState(false);
 
   const [eventsState, setEventsState] = useState<EventsState>({});
@@ -81,7 +75,7 @@ export default function App(): JSX.Element {
   const [testSource, setTestSource] = useState("manual");
   const [testType, setTestType] = useState("preview");
   const [testExternalId, setTestExternalId] = useState("example-1");
-  const [testPayload, setTestPayload] = useState("{\n  \"hello\": \"world\"\n}");
+  const [testPayload, setTestPayload] = useState('{\n  "hello": "world"\n}');
   const [testState, setTestState] = useState<EventsTestState>({});
   const [testLoading, setTestLoading] = useState(false);
 
@@ -93,8 +87,8 @@ export default function App(): JSX.Element {
   });
   const [workspaces, setWorkspaces] = useState<WorkspaceRow[]>([]);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
-    () => localStorage.getItem(WORKSPACE_STORAGE_KEY)
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(() =>
+    localStorage.getItem(WORKSPACE_STORAGE_KEY)
   );
 
   useEffect(() => {
@@ -128,11 +122,7 @@ export default function App(): JSX.Element {
     }
   }, [selectedWorkspaceId]);
 
-  useEffect(() => {
-    void refreshWorkspaces();
-  }, []);
-
-  async function refreshWorkspaces() {
+  const refreshWorkspaces = useCallback(async () => {
     setWorkspaceLoading(true);
     const result = await listWorkspaces();
     if (result.ok && result.data) {
@@ -142,13 +132,16 @@ export default function App(): JSX.Element {
         : false;
       if (!exists) {
         const fallback =
-          result.data.find((workspace) => workspace.slug === "default") ??
-          result.data[0];
+          result.data.find((workspace) => workspace.slug === "default") ?? result.data[0];
         setSelectedWorkspaceId(fallback?.id ?? null);
       }
     }
     setWorkspaceLoading(false);
-  }
+  }, [selectedWorkspaceId]);
+
+  useEffect(() => {
+    void refreshWorkspaces();
+  }, [refreshWorkspaces]);
 
   const previewUrl = useMemo(() => {
     if (!recordUri.trim()) return "";
@@ -165,15 +158,12 @@ export default function App(): JSX.Element {
       }
     ).contexts;
     const deliverables = contexts?.deliverables ?? [];
-    return deliverables.reduce<Record<string, { title?: string | null }>>(
-      (acc, deliverable) => {
-        if (deliverable?.key) {
-          acc[deliverable.key] = { title: deliverable.title ?? null };
-        }
-        return acc;
-      },
-      {}
-    );
+    return deliverables.reduce<Record<string, { title?: string | null }>>((acc, deliverable) => {
+      if (deliverable?.key) {
+        acc[deliverable.key] = { title: deliverable.title ?? null };
+      }
+      return acc;
+    }, {});
   }, [previewState.data]);
 
   async function runPreview(nextUri?: string): Promise<void> {
@@ -202,14 +192,13 @@ export default function App(): JSX.Element {
         error: !result.ok
           ? `Request failed with status ${result.status}.`
           : result.data === null && result.text
-          ? "Response was not valid JSON."
-          : undefined,
+            ? "Response was not valid JSON."
+            : undefined,
       });
     } catch (error) {
       setPreviewState({
         url,
-        error:
-          error instanceof Error ? error.message : "Failed to fetch preview.",
+        error: error instanceof Error ? error.message : "Failed to fetch preview.",
       });
     } finally {
       setPreviewLoading(false);
@@ -228,18 +217,14 @@ export default function App(): JSX.Element {
     try {
       const projectResult = await createProjectFromRecord(uri);
       if (!projectResult.ok || !projectResult.data) {
-        setMaterializeMessage(
-          projectResult.text || "Failed to create project."
-        );
+        setMaterializeMessage(projectResult.text || "Failed to create project.");
         return;
       }
 
       const projectId = projectResult.data.project.id;
       const materializeResult = await materializeProject(projectId);
       if (!materializeResult.ok || !materializeResult.data) {
-        setMaterializeMessage(
-          materializeResult.text || "Failed to materialize tasks."
-        );
+        setMaterializeMessage(materializeResult.text || "Failed to materialize tasks.");
         return;
       }
 
@@ -252,9 +237,7 @@ export default function App(): JSX.Element {
       setSelectedProjectId(projectId);
       setActiveTab("projects");
     } catch (error) {
-      setMaterializeMessage(
-        error instanceof Error ? error.message : "Materialize failed."
-      );
+      setMaterializeMessage(error instanceof Error ? error.message : "Materialize failed.");
     } finally {
       setMaterializeLoading(false);
     }
@@ -277,14 +260,13 @@ export default function App(): JSX.Element {
         error: !result.ok
           ? `Request failed with status ${result.status}.`
           : result.data === null && result.text
-          ? "Response was not valid JSON."
-          : undefined,
+            ? "Response was not valid JSON."
+            : undefined,
       });
     } catch (error) {
       setEventsState({
         url,
-        error:
-          error instanceof Error ? error.message : "Failed to load events.",
+        error: error instanceof Error ? error.message : "Failed to load events.",
       });
     } finally {
       setEventsLoading(false);
@@ -331,14 +313,13 @@ export default function App(): JSX.Element {
         error: !result.ok
           ? `Request failed with status ${result.status}.`
           : result.data === null && result.text
-          ? "Response was not valid JSON."
-          : undefined,
+            ? "Response was not valid JSON."
+            : undefined,
       });
     } catch (error) {
       setTestState({
         url,
-        error:
-          error instanceof Error ? error.message : "Failed to post test event.",
+        error: error instanceof Error ? error.message : "Failed to post test event.",
       });
     } finally {
       setTestLoading(false);
@@ -357,17 +338,15 @@ export default function App(): JSX.Element {
 
   const idempotencyKey =
     typeof testState.data === "object" && testState.data
-      ? ((testState.data as { idempotencyKey?: string; idempotency_key?: string })
-          .idempotencyKey ||
-        (testState.data as { idempotencyKey?: string; idempotency_key?: string })
-          .idempotency_key)
+      ? (testState.data as { idempotencyKey?: string; idempotency_key?: string }).idempotencyKey ||
+        (testState.data as { idempotencyKey?: string; idempotency_key?: string }).idempotency_key
       : undefined;
 
   const events: unknown[] = Array.isArray(eventsState.data)
     ? eventsState.data
     : Array.isArray((eventsState.data as { events?: unknown[] } | undefined)?.events)
-    ? (eventsState.data as { events?: unknown[] }).events ?? []
-    : [];
+      ? ((eventsState.data as { events?: unknown[] }).events ?? [])
+      : [];
 
   async function copyToClipboard(label: string, value: string): Promise<void> {
     try {
@@ -504,22 +483,14 @@ export default function App(): JSX.Element {
               <div className="example-row">
                 <span>Example URIs:</span>
                 {EXAMPLE_URIS.map((uri) => (
-                  <button
-                    key={uri}
-                    type="button"
-                    onClick={() => setRecordUri(uri)}
-                  >
+                  <button key={uri} type="button" onClick={() => setRecordUri(uri)}>
                     {uri}
                   </button>
                 ))}
               </div>
 
               <div className="actions">
-                <button
-                  type="button"
-                  onClick={() => runPreview()}
-                  disabled={previewLoading}
-                >
+                <button type="button" onClick={() => runPreview()} disabled={previewLoading}>
                   {previewLoading ? "Running..." : "Run Preview"}
                 </button>
                 <button
@@ -528,9 +499,7 @@ export default function App(): JSX.Element {
                   onClick={materializeTasks}
                   disabled={materializeLoading || !recordUri.trim()}
                 >
-                  {materializeLoading
-                    ? "Materializing..."
-                    : "Create Project + Materialize Tasks"}
+                  {materializeLoading ? "Materializing..." : "Create Project + Materialize Tasks"}
                 </button>
                 <label className="checkbox">
                   <input
@@ -550,9 +519,7 @@ export default function App(): JSX.Element {
               )}
 
               <div className="results">
-                {previewState.error && (
-                  <div className="error">{previewState.error}</div>
-                )}
+                {previewState.error && <div className="error">{previewState.error}</div>}
 
                 {previewState.status !== undefined && (
                   <div className="meta">
@@ -573,10 +540,7 @@ export default function App(): JSX.Element {
                     <div>
                       <strong>plan_id:</strong> {planId}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard("plan_id", planId)}
-                    >
+                    <button type="button" onClick={() => copyToClipboard("plan_id", planId)}>
                       Copy plan_id
                     </button>
                   </div>
@@ -604,8 +568,7 @@ export default function App(): JSX.Element {
                         onClick={() =>
                           copyToClipboard(
                             "response JSON",
-                            previewState.text ||
-                              JSON.stringify(previewState.data, null, 2)
+                            previewState.text || JSON.stringify(previewState.data, null, 2)
                           )
                         }
                       >
@@ -622,9 +585,7 @@ export default function App(): JSX.Element {
                       <strong>Response Text</strong>
                       <button
                         type="button"
-                        onClick={() =>
-                          copyToClipboard("response text", previewState.text || "")
-                        }
+                        onClick={() => copyToClipboard("response text", previewState.text || "")}
                       >
                         Copy text
                       </button>
@@ -642,20 +603,14 @@ export default function App(): JSX.Element {
         <section className="panel">
           <h2>Events Viewer</h2>
           <div className="actions">
-            <button
-              type="button"
-              onClick={refreshEvents}
-              disabled={eventsLoading}
-            >
+            <button type="button" onClick={refreshEvents} disabled={eventsLoading}>
               {eventsLoading ? "Refreshing..." : "Refresh"}
             </button>
             {eventsState.url && <span className="url-hint">{eventsState.url}</span>}
           </div>
 
           <div className="results">
-            {eventsState.error && (
-              <div className="error">{eventsState.error}</div>
-            )}
+            {eventsState.error && <div className="error">{eventsState.error}</div>}
 
             {eventsState.status !== undefined && (
               <div className="meta">
@@ -695,9 +650,7 @@ export default function App(): JSX.Element {
                       <tr
                         key={index}
                         className={isExpanded ? "expanded" : ""}
-                        onClick={() =>
-                          setExpandedRowIndex(isExpanded ? null : index)
-                        }
+                        onClick={() => setExpandedRowIndex(isExpanded ? null : index)}
                       >
                         <td>{String(row.source ?? "")}</td>
                         <td>{String(row.type ?? "")}</td>
@@ -763,11 +716,7 @@ export default function App(): JSX.Element {
             </label>
 
             <div className="actions">
-              <button
-                type="button"
-                onClick={runEventsTest}
-                disabled={testLoading}
-              >
+              <button type="button" onClick={runEventsTest} disabled={testLoading}>
                 {testLoading ? "Sending..." : "Send Test Event"}
               </button>
               {testState.url && <span className="url-hint">{testState.url}</span>}
@@ -793,9 +742,7 @@ export default function App(): JSX.Element {
                 </div>
                 <button
                   type="button"
-                  onClick={() =>
-                    copyToClipboard("idempotencyKey", idempotencyKey)
-                  }
+                  onClick={() => copyToClipboard("idempotencyKey", idempotencyKey)}
                 >
                   Copy idempotencyKey
                 </button>
@@ -845,10 +792,7 @@ export default function App(): JSX.Element {
       )}
 
       {activeTab === "integrations" && (
-        <IntegrationsPanel
-          workspaceId={selectedWorkspaceId}
-          workspaces={workspaces}
-        />
+        <IntegrationsPanel workspaceId={selectedWorkspaceId} workspaces={workspaces} />
       )}
 
       {activeTab === "ingest" && (

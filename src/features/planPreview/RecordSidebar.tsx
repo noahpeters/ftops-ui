@@ -7,10 +7,7 @@ type RecordSidebarProps = {
   onSelect: (uri: string) => void;
 };
 
-export function RecordSidebar({
-  selectedUri,
-  onSelect,
-}: RecordSidebarProps): JSX.Element {
+export function RecordSidebar({ selectedUri, onSelect }: RecordSidebarProps): JSX.Element {
   const [records, setRecords] = useState<CommercialRecordListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -77,9 +74,7 @@ export function RecordSidebar({
       {loading && <div className="empty">Loading records...</div>}
       {error && <div className="error">{error}</div>}
 
-      {!loading && !error && records.length === 0 && (
-        <div className="empty">No records found.</div>
-      )}
+      {!loading && !error && records.length === 0 && <div className="empty">No records found.</div>}
 
       <div className="record-list">
         {records.map((record) => {
@@ -96,9 +91,7 @@ export function RecordSidebar({
                 <span>
                   {record.source}/{record.kind}
                 </span>
-                {record.customer_display && (
-                  <span>{record.customer_display}</span>
-                )}
+                {record.customer_display && <span>{record.customer_display}</span>}
                 <span>{record.last_seen_at || "no last_seen_at"}</span>
               </div>
             </button>

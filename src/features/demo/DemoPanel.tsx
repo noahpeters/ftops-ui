@@ -3,11 +3,7 @@ import { buildUrl, fetchJson } from "../../lib/api";
 import { PayloadEditor } from "./PayloadEditor";
 import { ScenarioDetails } from "./ScenarioDetails";
 import { ScenarioPicker } from "./ScenarioPicker";
-import {
-  DEFAULT_SCENARIOS,
-  buildIdempotencyVariant,
-  type DemoScenario,
-} from "./scenarios";
+import { DEFAULT_SCENARIOS, buildIdempotencyVariant } from "./scenarios";
 
 const STORAGE_KEY = "ftops-ui:demo:state";
 const RECORD_URI_STORAGE_KEY = "ftops-ui:record-uri";
@@ -65,8 +61,7 @@ export function DemoPanel(): JSX.Element {
 
   const scenario = useMemo(() => {
     return (
-      DEFAULT_SCENARIOS.find((item) => item.id === state.selectedScenarioId) ??
-      DEFAULT_SCENARIOS[0]
+      DEFAULT_SCENARIOS.find((item) => item.id === state.selectedScenarioId) ?? DEFAULT_SCENARIOS[0]
     );
   }, [state.selectedScenarioId]);
 
@@ -101,7 +96,7 @@ export function DemoPanel(): JSX.Element {
       baseExternalId: selected.defaultRequest.baseExternalId,
       idStrategy: selected.supports.idStrategies.includes(state.idStrategy)
         ? state.idStrategy
-        : selected.supports.idStrategies[0] ?? "fixed",
+        : (selected.supports.idStrategies[0] ?? "fixed"),
     });
   }
 
@@ -206,11 +201,10 @@ export function DemoPanel(): JSX.Element {
 
       const idempotencyKey =
         result.data && typeof result.data === "object"
-          ? ((result.data as { idempotencyKey?: string; idempotency_key?: string })
-              .idempotencyKey ||
-              (result.data as { idempotencyKey?: string; idempotency_key?: string })
-                .idempotency_key ||
-              null)
+          ? (result.data as { idempotencyKey?: string; idempotency_key?: string }).idempotencyKey ||
+            (result.data as { idempotencyKey?: string; idempotency_key?: string })
+              .idempotency_key ||
+            null
           : null;
 
       addLog({
@@ -296,9 +290,7 @@ export function DemoPanel(): JSX.Element {
           ID Strategy
           <select
             value={state.idStrategy}
-            onChange={(event) =>
-              updateState({ idStrategy: event.target.value as IdStrategy })
-            }
+            onChange={(event) => updateState({ idStrategy: event.target.value as IdStrategy })}
           >
             {scenario.supports.idStrategies.map((strategy) => (
               <option key={strategy} value={strategy}>
@@ -313,9 +305,7 @@ export function DemoPanel(): JSX.Element {
             type="number"
             min={1}
             value={state.repeatCount}
-            onChange={(event) =>
-              updateState({ repeatCount: Number(event.target.value) })
-            }
+            onChange={(event) => updateState({ repeatCount: Number(event.target.value) })}
           />
         </label>
         <label>
@@ -361,11 +351,7 @@ export function DemoPanel(): JSX.Element {
         <button type="button" onClick={() => sendOnce(1)} disabled={sending}>
           Send Once
         </button>
-        <button
-          type="button"
-          onClick={() => sendOnce(state.repeatCount)}
-          disabled={sending}
-        >
+        <button type="button" onClick={() => sendOnce(state.repeatCount)} disabled={sending}>
           Send {state.repeatCount}
         </button>
         <button type="button" className="secondary" onClick={stopSending}>

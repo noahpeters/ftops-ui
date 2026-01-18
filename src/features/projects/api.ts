@@ -63,14 +63,11 @@ export async function addTaskNote(taskId: string, body: string) {
 }
 
 export async function createProjectFromRecord(recordUri: string) {
-  return fetchJson<{ project: ProjectRow; created: boolean }>(
-    buildUrl("/projects/from-record"),
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recordUri }),
-    }
-  );
+  return fetchJson<{ project: ProjectRow; created: boolean }>(buildUrl("/projects/from-record"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recordUri }),
+  });
 }
 
 export async function materializeProject(projectId: string) {

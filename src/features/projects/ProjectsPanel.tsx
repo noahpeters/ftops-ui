@@ -199,9 +199,7 @@ export function ProjectsPanel({
               <div className="project-header">
                 <div>
                   <h3>{project?.title ?? "Project"}</h3>
-                  <p className="muted">
-                    Record: {project?.commercial_record_uri ?? "n/a"}
-                  </p>
+                  <p className="muted">Record: {project?.commercial_record_uri ?? "n/a"}</p>
                 </div>
                 <button type="button" className="secondary" onClick={() => onSelectProject(null)}>
                   Back to list
@@ -429,9 +427,7 @@ function TaskRowView({
         <div className="task-notes">
           {notesLoading[task.id] && <p className="muted">Loading notes...</p>}
           {noteError && <div className="error">{noteError}</div>}
-          {notes.length === 0 && !notesLoading[task.id] && (
-            <p className="muted">No notes yet.</p>
-          )}
+          {notes.length === 0 && !notesLoading[task.id] && <p className="muted">No notes yet.</p>}
           {notes.map((note) => (
             <div key={note.id} className="note-row">
               <div className="note-meta">

@@ -57,9 +57,7 @@ export async function fetchJson<T>(
       headers,
     });
   } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Network request failed"
-    );
+    throw new Error(error instanceof Error ? error.message : "Network request failed");
   }
 
   try {

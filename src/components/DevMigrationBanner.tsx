@@ -44,12 +44,10 @@ export function DevMigrationBanner(): JSX.Element | null {
     <div className="dev-banner">
       <strong>DB migrations are out of date.</strong>
       <span>
-        Applied: {status.appliedLatest ?? "none"}; expected:{" "}
-        {status.expectedLatest ?? "unknown"}.
+        Applied: {status.appliedLatest ?? "none"}; expected: {status.expectedLatest ?? "unknown"}.
       </span>
       <span>
-        Missing: {status.missingCount ?? "?"}. Run: wrangler d1 migrations apply
-        &lt;db&gt;
+        Missing: {status.missingCount ?? "?"}. Run: wrangler d1 migrations apply &lt;db&gt;
       </span>
     </div>
   );

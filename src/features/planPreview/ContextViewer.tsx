@@ -59,32 +59,35 @@ type ContextViewerProps = {
 };
 
 export function ContextViewer({ data }: ContextViewerProps): JSX.Element | null {
-  const contexts = (data as { contexts?: unknown })?.contexts as
-    | {
-        project?: ProjectContext;
-        shared?: SharedContext[];
-        deliverables?: DeliverableContext[];
-      }
-    | undefined;
-
-  if (!contexts || !contexts.project) {
-    return null;
-  }
-
-  const matchedTemplatesByContext =
-    ((data as { matchedTemplatesByContext?: Record<string, MatchedTemplate[]> })
-      ?.matchedTemplatesByContext as Record<string, MatchedTemplate[]>) ?? {};
-
-  const shared = Array.isArray(contexts.shared) ? contexts.shared : [];
-  const deliverables = Array.isArray(contexts.deliverables)
-    ? contexts.deliverables
-    : [];
-
   const [showRuleIds, setShowRuleIds] = useState(false);
-  const [selectedDeliverable, setSelectedDeliverable] = useState<string | null>(
-    null
-  );
+  const [selectedDeliverable, setSelectedDeliverable] = useState<string | null>(null);
   const [deliverableQuery, setDeliverableQuery] = useState("");
+
+  const contexts = useMemo(() => {
+    return (data as { contexts?: unknown })?.contexts as
+      | {
+          project?: ProjectContext;
+          shared?: SharedContext[];
+          deliverables?: DeliverableContext[];
+        }
+      | undefined;
+  }, [data]);
+
+  const matchedTemplatesByContext = useMemo(() => {
+    return (
+      (data as { matchedTemplatesByContext?: Record<string, MatchedTemplate[]> })
+        ?.matchedTemplatesByContext ?? {}
+    );
+  }, [data]);
+
+  const shared = useMemo(
+    () => (Array.isArray(contexts?.shared) ? (contexts?.shared ?? []) : []),
+    [contexts]
+  );
+  const deliverables = useMemo(
+    () => (Array.isArray(contexts?.deliverables) ? (contexts?.deliverables ?? []) : []),
+    [contexts]
+  );
 
   const filteredDeliverables = useMemo(() => {
     const query = deliverableQuery.trim().toLowerCase();
@@ -113,6 +116,10 @@ export function ContextViewer({ data }: ContextViewerProps): JSX.Element | null 
   const getMatches = (type: string, key: string) =>
     matchedTemplatesByContext[`${type}::${key}`] ?? [];
 
+  if (!contexts || !contexts.project) {
+    return null;
+  }
+
   return (
     <div className="context-panel">
       <div className="context-panel-header">
@@ -137,9 +144,7 @@ export function ContextViewer({ data }: ContextViewerProps): JSX.Element | null 
             <span className="context-badge project">Project</span>
             <span className="context-key">{shorten(contexts.project.key)}</span>
             {contexts.project.customer_display && (
-              <span className="context-title">
-                {contexts.project.customer_display}
-              </span>
+              <span className="context-title">{contexts.project.customer_display}</span>
             )}
           </summary>
           <div className="context-body">
@@ -156,8 +161,7 @@ export function ContextViewer({ data }: ContextViewerProps): JSX.Element | null 
                 {contexts.project.quoted_install_date ?? "n/a"}
               </div>
               <div>
-                <strong>snapshot_hash:</strong>{" "}
-                {contexts.project.snapshot_hash ?? "n/a"}
+                <strong>snapshot_hash:</strong> {contexts.project.snapshot_hash ?? "n/a"}
               </div>
             </div>
             <MatchesList
@@ -176,9 +180,7 @@ export function ContextViewer({ data }: ContextViewerProps): JSX.Element | null 
             <summary className="context-summary">
               <span className="context-badge shared">Shared</span>
               <span className="context-key">{shorten(context.key)}</span>
-              <span className="context-title">
-                {context.line_items.length} line items
-              </span>
+              <span className="context-title">{context.line_items.length} line items</span>
             </summary>
             <div className="context-body">
               <div className="context-meta">
@@ -201,15 +203,12 @@ export function ContextViewer({ data }: ContextViewerProps): JSX.Element | null 
               <div className="context-list">
                 {context.line_items.map((item) => (
                   <div key={item.line_item_uri}>
-                    {shorten(item.line_item_uri)} — {item.title ?? "Untitled"} (
-                    {item.category_key}/{item.deliverable_key})
+                    {shorten(item.line_item_uri)} — {item.title ?? "Untitled"} ({item.category_key}/
+                    {item.deliverable_key})
                   </div>
                 ))}
               </div>
-              <MatchesList
-                matches={getMatches("shared", context.key)}
-                showRuleIds={showRuleIds}
-              />
+              <MatchesList matches={getMatches("shared", context.key)} showRuleIds={showRuleIds} />
             </div>
           </details>
         ))}
@@ -242,31 +241,22 @@ export function ContextViewer({ data }: ContextViewerProps): JSX.Element | null 
         {filteredDeliverables.map((context) => {
           const matches = getMatches("deliverable", context.key);
           const isSelected = selectedDeliverable === context.key;
-          const showMatches =
-            !selectedDeliverable || selectedDeliverable === context.key;
+          const showMatches = !selectedDeliverable || selectedDeliverable === context.key;
           return (
             <details
-              className={`context-card ${
-                isSelected ? "selected" : ""
-              }`.trim()}
+              className={`context-card ${isSelected ? "selected" : ""}`.trim()}
               key={context.key}
-              onClick={() =>
-                setSelectedDeliverable(isSelected ? null : context.key)
-              }
+              onClick={() => setSelectedDeliverable(isSelected ? null : context.key)}
             >
               <summary className="context-summary">
                 <span className="context-badge deliverable">Deliverable</span>
                 <span className="context-key">{shorten(context.key)}</span>
-                <span className="context-title">
-                  {context.title ?? "Untitled"}
-                </span>
+                <span className="context-title">{context.title ?? "Untitled"}</span>
                 <span className="context-meta-inline">
                   {context.category_key}/{context.deliverable_key}
                 </span>
                 {context.group_key && (
-                  <span className="context-meta-inline">
-                    group: {context.group_key}
-                  </span>
+                  <span className="context-meta-inline">group: {context.group_key}</span>
                 )}
               </summary>
               <div className="context-body">
@@ -287,16 +277,10 @@ export function ContextViewer({ data }: ContextViewerProps): JSX.Element | null 
                   )}
                 </div>
                 {context.config && (
-                  <pre className="context-json">
-                    {JSON.stringify(context.config, null, 2)}
-                  </pre>
+                  <pre className="context-json">{JSON.stringify(context.config, null, 2)}</pre>
                 )}
-                {showMatches && (
-                  <MatchesList matches={matches} showRuleIds={showRuleIds} />
-                )}
-                {!showMatches && (
-                  <p className="muted">Select to view matches.</p>
-                )}
+                {showMatches && <MatchesList matches={matches} showRuleIds={showRuleIds} />}
+                {!showMatches && <p className="muted">Select to view matches.</p>}
               </div>
             </details>
           );

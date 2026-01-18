@@ -15,10 +15,7 @@ export function ScenarioPicker({
     <div className="scenario-picker">
       <label>
         Scenario
-        <select
-          value={selectedId}
-          onChange={(event) => onSelect(event.target.value)}
-        >
+        <select value={selectedId} onChange={(event) => onSelect(event.target.value)}>
           {scenarios.map((scenario) => (
             <option key={scenario.id} value={scenario.id}>
               {scenario.name}

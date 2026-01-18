@@ -7,10 +7,7 @@ type RecordSidebarProps = {
   onSelect: (uri: string) => void;
 };
 
-export function RecordSidebar({
-  selectedUri,
-  onSelect,
-}: RecordSidebarProps): JSX.Element {
+export function RecordSidebar({ selectedUri, onSelect }: RecordSidebarProps): JSX.Element {
   const [records, setRecords] = useState<CommercialRecordListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -98,9 +95,7 @@ export function RecordSidebar({
                 <span>
                   {record.source}/{record.kind}
                 </span>
-                {record.customer_display && (
-                  <span>{record.customer_display}</span>
-                )}
+                {record.customer_display && <span>{record.customer_display}</span>}
                 <span>{record.last_seen_at || "no last_seen_at"}</span>
               </div>
             </button>

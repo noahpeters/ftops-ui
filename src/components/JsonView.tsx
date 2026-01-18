@@ -32,7 +32,9 @@ function renderValue(value: unknown): React.ReactNode {
     if (entries.length === 0) return "{}";
     return (
       <details open>
-        <summary>{"{...}"} {entries.length} keys</summary>
+        <summary>
+          {"{...}"} {entries.length} keys
+        </summary>
         <div className="json-children">
           {entries.map(([key, item]) => (
             <div key={key} className="json-row">

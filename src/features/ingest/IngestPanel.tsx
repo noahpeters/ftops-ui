@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   getIngestRequest,
   listIngestRequests,
@@ -25,11 +25,7 @@ export function IngestPanel({
   const [loading, setLoading] = useState(false);
   const workspaceMap = new Map(workspaces.map((ws) => [ws.id, ws.name]));
 
-  useEffect(() => {
-    void refresh();
-  }, [provider, environment, workspaceId]);
-
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     const result = await listIngestRequests({
@@ -45,7 +41,11 @@ export function IngestPanel({
       setError(result.text || "Failed to load ingest requests.");
     }
     setLoading(false);
-  }
+  }, [environment, provider, workspaceId]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   async function loadDetail(id: string) {
     const result = await getIngestRequest(id);
@@ -67,21 +67,14 @@ export function IngestPanel({
             </option>
           ))}
         </select>
-        <select
-          value={environment}
-          onChange={(event) => setEnvironment(event.target.value)}
-        >
+        <select value={environment} onChange={(event) => setEnvironment(event.target.value)}>
           {ENVIRONMENTS.map((item) => (
             <option key={item} value={item}>
               {item}
             </option>
           ))}
         </select>
-        <select
-          value={workspaceId ?? ""}
-          onChange={() => undefined}
-          disabled
-        >
+        <select value={workspaceId ?? ""} onChange={() => undefined} disabled>
           {workspaces.map((workspace) => (
             <option key={workspace.id} value={workspace.id}>
               {workspace.name}
@@ -96,42 +89,42 @@ export function IngestPanel({
       {error && <div className="error">{error}</div>}
 
       <div className="ingest-layout">
-      <div className="ingest-list">
-        <table>
-          <thead>
-            <tr>
-              <th>received_at</th>
-              <th>workspace</th>
-              <th>integration</th>
-              <th>routed</th>
-              <th>verified</th>
-              <th>topic</th>
-              <th>shop</th>
-              <th>webhook_id</th>
-              <th>error</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.map((request) => (
-              <tr key={request.id} onClick={() => loadDetail(request.id)}>
-                <td>{request.received_at}</td>
-                <td>{workspaceMap.get(request.workspace_id) ?? request.workspace_id}</td>
-                <td>{request.integration_display_name ?? "-"}</td>
-                <td>{request.integration_id ? "yes" : "no"}</td>
-                <td>{request.signature_verified ? "yes" : "no"}</td>
-                <td>{request.topic ?? "-"}</td>
-                <td>{request.shop_domain ?? "-"}</td>
-                <td>{request.webhook_id ?? "-"}</td>
-                <td>{request.verify_error ?? "-"}</td>
-              </tr>
-            ))}
-            {requests.length === 0 && (
+        <div className="ingest-list">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={10} className="empty">
-                  No requests.
-                </td>
+                <th>received_at</th>
+                <th>workspace</th>
+                <th>integration</th>
+                <th>routed</th>
+                <th>verified</th>
+                <th>topic</th>
+                <th>shop</th>
+                <th>webhook_id</th>
+                <th>error</th>
               </tr>
-            )}
+            </thead>
+            <tbody>
+              {requests.map((request) => (
+                <tr key={request.id} onClick={() => loadDetail(request.id)}>
+                  <td>{request.received_at}</td>
+                  <td>{workspaceMap.get(request.workspace_id) ?? request.workspace_id}</td>
+                  <td>{request.integration_display_name ?? "-"}</td>
+                  <td>{request.integration_id ? "yes" : "no"}</td>
+                  <td>{request.signature_verified ? "yes" : "no"}</td>
+                  <td>{request.topic ?? "-"}</td>
+                  <td>{request.shop_domain ?? "-"}</td>
+                  <td>{request.webhook_id ?? "-"}</td>
+                  <td>{request.verify_error ?? "-"}</td>
+                </tr>
+              ))}
+              {requests.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="empty">
+                    No requests.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

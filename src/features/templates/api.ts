@@ -95,28 +95,20 @@ export function updateTemplate(key: string, body: UpdateTemplateInput) {
 }
 
 export function deleteTemplate(key: string) {
-  return fetchJson<{ deleted: boolean }>(
-    buildUrl(`/templates/${encodeURIComponent(key)}`),
-    { method: "DELETE" }
-  );
+  return fetchJson<{ deleted: boolean }>(buildUrl(`/templates/${encodeURIComponent(key)}`), {
+    method: "DELETE",
+  });
 }
 
 export function createRule(templateKey: string, body: CreateRuleInput) {
-  return fetchJson<TemplateRule>(
-    buildUrl(`/templates/${encodeURIComponent(templateKey)}/rules`),
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }
-  );
+  return fetchJson<TemplateRule>(buildUrl(`/templates/${encodeURIComponent(templateKey)}/rules`), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
-export function updateRule(
-  templateKey: string,
-  ruleId: string,
-  body: UpdateRuleInput
-) {
+export function updateRule(templateKey: string, ruleId: string, body: UpdateRuleInput) {
   return fetchJson<TemplateRule>(
     buildUrl(`/templates/${encodeURIComponent(templateKey)}/rules/${ruleId}`),
     {

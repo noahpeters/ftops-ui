@@ -11,10 +11,7 @@ export type DemoScenario = {
   supports: {
     idStrategies: Array<"increment" | "random" | "fixed" | "timestamped">;
   };
-  buildRequest?: (args: {
-    externalId: string;
-    nowIso: string;
-  }) => {
+  buildRequest?: (args: { externalId: string; nowIso: string }) => {
     source: string;
     type: string;
     payload: Record<string, unknown>;
@@ -169,8 +166,7 @@ export const DEFAULT_SCENARIOS: DemoScenario[] = [
   {
     id: "manual-proposal",
     name: "Manual proposal (furniture + delivery + install)",
-    description:
-      "Dining table with delivery/install line items and design/approval flags.",
+    description: "Dining table with delivery/install line items and design/approval flags.",
     defaultRequest: {
       source: "manual",
       type: "commercial_record_upserted",
@@ -189,8 +185,7 @@ export const DEFAULT_SCENARIOS: DemoScenario[] = [
   {
     id: "cabinetry-grouped",
     name: "Cabinetry (shared samples + install)",
-    description:
-      "Grouped cabinet runs that require samples and install for shared planning.",
+    description: "Grouped cabinet runs that require samples and install for shared planning.",
     defaultRequest: {
       source: "manual",
       type: "commercial_record_upserted",
@@ -228,8 +223,7 @@ export const DEFAULT_SCENARIOS: DemoScenario[] = [
   {
     id: "idempotency-variant",
     name: "Idempotency + change detection",
-    description:
-      "Re-send with fixed externalId and flip requiresDesign to test idempotency.",
+    description: "Re-send with fixed externalId and flip requiresDesign to test idempotency.",
     defaultRequest: {
       source: "manual",
       type: "commercial_record_upserted",
@@ -242,9 +236,6 @@ export const DEFAULT_SCENARIOS: DemoScenario[] = [
   },
 ];
 
-export function buildIdempotencyVariant(
-  externalId: string,
-  variant: "off" | "on"
-) {
+export function buildIdempotencyVariant(externalId: string, variant: "off" | "on") {
   return buildIdempotencyPayload(externalId, variant === "on");
 }

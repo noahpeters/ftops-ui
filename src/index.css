@@ -956,7 +956,6 @@ pre {
   font-size: 12px;
 }
 
-
 .panel-advanced {
   border: 1px dashed #d2d2d2;
   border-radius: 8px;
@@ -970,7 +969,6 @@ pre {
   color: #444;
   margin-bottom: 8px;
 }
-
 
 @media (max-width: 720px) {
   .app {

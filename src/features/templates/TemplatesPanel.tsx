@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { JsonView } from "../../components/JsonView";
 import {
   createRule,
@@ -15,7 +15,7 @@ import type { TemplateDetail, TemplateListItem, TemplateRule } from "./api";
 const TEMPLATE_SELECTED_KEY = "ftops-ui:templates:selected";
 const TEMPLATE_SEARCH_KEY = "ftops-ui:templates:search";
 
-const EMPTY_RULE_JSON = "{\n  \"attach_to\": \"project\"\n}";
+const EMPTY_RULE_JSON = '{\n  "attach_to": "project"\n}';
 
 const TEMPLATE_KINDS = ["task", "checklist", "milestone"] as const;
 
@@ -61,8 +61,7 @@ type NewTemplateFormState = TemplateFormState & {
 export function TemplatesPanel(): JSX.Element {
   const [templatesState, setTemplatesState] = useState<TemplatesState>({});
   const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [templateDetailState, setTemplateDetailState] =
-    useState<TemplateDetailState>({});
+  const [templateDetailState, setTemplateDetailState] = useState<TemplateDetailState>({});
   const [templateDetailLoading, setTemplateDetailLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -119,19 +118,58 @@ export function TemplatesPanel(): JSX.Element {
     localStorage.setItem(TEMPLATE_SEARCH_KEY, searchTerm);
   }, [searchTerm]);
 
+  const refreshTemplates = useCallback(async (): Promise<void> => {
+    setTemplatesLoading(true);
+    setActionError(null);
+    const result = await listTemplates();
+    setTemplatesState({
+      status: result.status,
+      durationMs: result.durationMs,
+      data: result.data ?? undefined,
+      text: result.text,
+      error: result.ok ? undefined : formatApiError(result, "Failed to load templates."),
+    });
+
+    if (result.ok && Array.isArray(result.data)) {
+      const keys = result.data.map((item) => item.key);
+      if (!selectedTemplateKey || !keys.includes(selectedTemplateKey)) {
+        setSelectedTemplateKey(keys[0] || "");
+      }
+    }
+    setTemplatesLoading(false);
+  }, [selectedTemplateKey]);
+
+  const loadTemplateDetail = useCallback(async (key: string): Promise<void> => {
+    if (!key) {
+      setTemplateDetailState({});
+      return;
+    }
+    setTemplateDetailLoading(true);
+    setActionError(null);
+    const result = await getTemplate(key);
+    setTemplateDetailState({
+      status: result.status,
+      durationMs: result.durationMs,
+      data: result.data ?? undefined,
+      text: result.text,
+      error: result.ok ? undefined : formatApiError(result, "Failed to load template."),
+    });
+    setTemplateDetailLoading(false);
+  }, []);
+
   useEffect(() => {
     if (templatesState.data) {
       return;
     }
     void refreshTemplates();
-  }, [templatesState.data]);
+  }, [refreshTemplates, templatesState.data]);
 
   useEffect(() => {
     if (!selectedTemplateKey) {
       return;
     }
     void loadTemplateDetail(selectedTemplateKey);
-  }, [selectedTemplateKey]);
+  }, [loadTemplateDetail, selectedTemplateKey]);
 
   useEffect(() => {
     if (!templateDetailState.data) {
@@ -163,7 +201,7 @@ export function TemplatesPanel(): JSX.Element {
     setRuleEdits(nextRuleEdits);
   }, [templateDetailState.data]);
 
-  const templates = templatesState.data ?? [];
+  const templates = useMemo(() => templatesState.data ?? [], [templatesState.data]);
 
   const filteredTemplates = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -179,45 +217,6 @@ export function TemplatesPanel(): JSX.Element {
 
   const templateDetail = templateDetailState.data;
   const rules = templateDetail?.rules ?? [];
-
-  async function refreshTemplates(): Promise<void> {
-    setTemplatesLoading(true);
-    setActionError(null);
-    const result = await listTemplates();
-    setTemplatesState({
-      status: result.status,
-      durationMs: result.durationMs,
-      data: result.data ?? undefined,
-      text: result.text,
-      error: result.ok ? undefined : formatApiError(result, "Failed to load templates."),
-    });
-
-    if (result.ok && Array.isArray(result.data)) {
-      const keys = result.data.map((item) => item.key);
-      if (!selectedTemplateKey || !keys.includes(selectedTemplateKey)) {
-        setSelectedTemplateKey(keys[0] || "");
-      }
-    }
-    setTemplatesLoading(false);
-  }
-
-  async function loadTemplateDetail(key: string): Promise<void> {
-    if (!key) {
-      setTemplateDetailState({});
-      return;
-    }
-    setTemplateDetailLoading(true);
-    setActionError(null);
-    const result = await getTemplate(key);
-    setTemplateDetailState({
-      status: result.status,
-      durationMs: result.durationMs,
-      data: result.data ?? undefined,
-      text: result.text,
-      error: result.ok ? undefined : formatApiError(result, "Failed to load template."),
-    });
-    setTemplateDetailLoading(false);
-  }
 
   async function handleCreateTemplate(): Promise<void> {
     if (!newTemplateForm.key.trim() || !newTemplateForm.title.trim()) {
@@ -453,11 +452,7 @@ export function TemplatesPanel(): JSX.Element {
           />
         </div>
         <div className="templates-actions">
-          <button
-            type="button"
-            onClick={refreshTemplates}
-            disabled={templatesLoading}
-          >
+          <button type="button" onClick={refreshTemplates} disabled={templatesLoading}>
             {templatesLoading ? "Refreshing..." : "Refresh"}
           </button>
           <button type="button" onClick={() => setShowNewTemplateModal(true)}>
@@ -466,9 +461,7 @@ export function TemplatesPanel(): JSX.Element {
         </div>
       </div>
 
-      {templatesState.error && (
-        <div className="error">{templatesState.error}</div>
-      )}
+      {templatesState.error && <div className="error">{templatesState.error}</div>}
 
       {actionError && <div className="error">{actionError}</div>}
 
@@ -478,9 +471,7 @@ export function TemplatesPanel(): JSX.Element {
             <strong>Templates</strong>
             <span>{filteredTemplates.length} shown</span>
           </div>
-          {filteredTemplates.length === 0 && (
-            <div className="empty">No templates found.</div>
-          )}
+          {filteredTemplates.length === 0 && <div className="empty">No templates found.</div>}
           {filteredTemplates.map((template) => {
             const isSelected = template.key === selectedTemplateKey;
             return (
@@ -495,12 +486,8 @@ export function TemplatesPanel(): JSX.Element {
                   <span>{template.title}</span>
                   <span>
                     {template.kind} · {template.scope}
-                    {template.category_key
-                      ? ` · ${template.category_key}`
-                      : ""}
-                    {template.deliverable_key
-                      ? `/${template.deliverable_key}`
-                      : ""}
+                    {template.category_key ? ` · ${template.category_key}` : ""}
+                    {template.deliverable_key ? `/${template.deliverable_key}` : ""}
                   </span>
                   <span className={template.is_active ? "status-on" : "status-off"}>
                     {template.is_active ? "active" : "inactive"}
@@ -521,13 +508,9 @@ export function TemplatesPanel(): JSX.Element {
             )}
           </div>
 
-          {templateDetailLoading && (
-            <div className="empty">Loading template details...</div>
-          )}
+          {templateDetailLoading && <div className="empty">Loading template details...</div>}
 
-          {templateDetailState.error && (
-            <div className="error">{templateDetailState.error}</div>
-          )}
+          {templateDetailState.error && <div className="error">{templateDetailState.error}</div>}
 
           {!templateDetail && !templateDetailLoading && (
             <div className="empty">Select a template to edit.</div>
@@ -540,11 +523,7 @@ export function TemplatesPanel(): JSX.Element {
                 <div className="form-grid">
                   <label>
                     Key
-                    <input
-                      type="text"
-                      value={templateDetail.template.key}
-                      disabled
-                    />
+                    <input type="text" value={templateDetail.template.key} disabled />
                   </label>
                   <label>
                     Title
@@ -662,11 +641,7 @@ export function TemplatesPanel(): JSX.Element {
                 </details>
 
                 <div className="actions">
-                  <button
-                    type="button"
-                    onClick={handleUpdateTemplate}
-                    disabled={savingTemplate}
-                  >
+                  <button type="button" onClick={handleUpdateTemplate} disabled={savingTemplate}>
                     {savingTemplate ? "Saving..." : "Save Template"}
                   </button>
                   <button
@@ -722,18 +697,12 @@ export function TemplatesPanel(): JSX.Element {
                       }
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleCreateRule}
-                    disabled={creatingRule}
-                  >
+                  <button type="button" onClick={handleCreateRule} disabled={creatingRule}>
                     {creatingRule ? "Creating..." : "Create Rule"}
                   </button>
                 </div>
 
-                {rules.length === 0 && (
-                  <div className="empty">No rules yet.</div>
-                )}
+                {rules.length === 0 && <div className="empty">No rules yet.</div>}
 
                 <div className="rules-list">
                   {rules.map((rule) => {
@@ -953,11 +922,7 @@ export function TemplatesPanel(): JSX.Element {
               />
             </details>
             <div className="actions">
-              <button
-                type="button"
-                onClick={handleCreateTemplate}
-                disabled={creatingTemplate}
-              >
+              <button type="button" onClick={handleCreateTemplate} disabled={creatingTemplate}>
                 {creatingTemplate ? "Creating..." : "Create"}
               </button>
               <button
@@ -975,16 +940,11 @@ export function TemplatesPanel(): JSX.Element {
   );
 }
 
-function formatApiError(
-  result: { data: unknown; text: string },
-  fallback: string
-) {
+function formatApiError(result: { data: unknown; text: string }, fallback: string) {
   if (result.data && typeof result.data === "object") {
     const data = result.data as { error?: string; details?: unknown };
     if (data.error) {
-      return data.details
-        ? `${data.error}: ${JSON.stringify(data.details)}`
-        : data.error;
+      return data.details ? `${data.error}: ${JSON.stringify(data.details)}` : data.error;
     }
   }
   if (result.text) {

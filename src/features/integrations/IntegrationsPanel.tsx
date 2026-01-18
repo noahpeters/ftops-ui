@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   createIntegration,
   deleteIntegration,
@@ -19,28 +19,19 @@ const PROVIDERS = [
 ];
 const ENVIRONMENTS = ["sandbox", "production"];
 
-export function IntegrationsPanel({
-  workspaceId,
-  workspaces,
-}: IntegrationsPanelProps) {
+export function IntegrationsPanel({ workspaceId, workspaces }: IntegrationsPanelProps) {
   const [integrations, setIntegrations] = useState<IntegrationRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [provider, setProvider] = useState<"shopify" | "qbo">("shopify");
-  const [environment, setEnvironment] = useState<"sandbox" | "production">(
-    "production"
-  );
+  const [environment, setEnvironment] = useState<"sandbox" | "production">("production");
   const [externalAccountId, setExternalAccountId] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [secretValue, setSecretValue] = useState("");
   const [secretUpdate, setSecretUpdate] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    void refresh();
-  }, [workspaceId]);
-
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     const result = await listIntegrations(workspaceId);
@@ -50,7 +41,11 @@ export function IntegrationsPanel({
       setError(result.text || "Failed to load integrations.");
     }
     setLoading(false);
-  }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   async function submitIntegration() {
     if (!workspaceId) {
@@ -88,9 +83,7 @@ export function IntegrationsPanel({
     const next = secretUpdate[integration.id]?.trim();
     if (!next) return;
     const secrets =
-      integration.provider === "shopify"
-        ? { webhookSecret: next }
-        : { webhookVerifierToken: next };
+      integration.provider === "shopify" ? { webhookSecret: next } : { webhookVerifierToken: next };
     await updateIntegration(integration.id, { secrets });
     setSecretUpdate((prev) => ({ ...prev, [integration.id]: "" }));
     await refresh();
@@ -117,11 +110,7 @@ export function IntegrationsPanel({
         <div className="form-grid">
           <div className="form-row">
             <label>Workspace</label>
-            <select
-              value={workspaceId ?? ""}
-              onChange={() => undefined}
-              disabled
-            >
+            <select value={workspaceId ?? ""} onChange={() => undefined} disabled>
               {workspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name}
@@ -146,9 +135,7 @@ export function IntegrationsPanel({
             <label>Environment</label>
             <select
               value={environment}
-              onChange={(event) =>
-                setEnvironment(event.target.value as "sandbox" | "production")
-              }
+              onChange={(event) => setEnvironment(event.target.value as "sandbox" | "production")}
             >
               {ENVIRONMENTS.map((item) => (
                 <option key={item} value={item}>
@@ -174,9 +161,7 @@ export function IntegrationsPanel({
             />
           </div>
           <div className="form-row">
-            <label>
-              {provider === "shopify" ? "Webhook secret" : "Webhook verifier token"}
-            </label>
+            <label>{provider === "shopify" ? "Webhook secret" : "Webhook verifier token"}</label>
             <input
               value={secretValue}
               onChange={(event) => setSecretValue(event.target.value)}
