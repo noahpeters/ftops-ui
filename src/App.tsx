@@ -3,6 +3,7 @@ import { buildUrl, fetchJson } from "./lib/api";
 import { DevMigrationBanner } from "./components/DevMigrationBanner";
 import { JsonView } from "./components/JsonView";
 import { DemoPanel } from "./features/demo/DemoPanel";
+import { ContextViewer } from "./features/planPreview/ContextViewer";
 import { RecordSidebar } from "./features/planPreview/RecordSidebar";
 import { TemplatesPanel } from "./features/templates/TemplatesPanel";
 import "./index.css";
@@ -387,6 +388,8 @@ export default function App(): JSX.Element {
                     </ul>
                   </div>
                 )}
+
+                <ContextViewer data={previewState.data} />
 
                 {previewState.data !== undefined && (
                   <div className="json-block">
