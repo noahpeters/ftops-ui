@@ -250,7 +250,7 @@ export default function App(): JSX.Element {
     setExpandedRowIndex(null);
 
     try {
-      const result = await fetchJson(url, { method: "GET" });
+      const result = await fetchJson(url, { method: "GET", credentials: "include" });
       setEventsState({
         url,
         status: result.status,
