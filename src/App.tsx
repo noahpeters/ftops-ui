@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildUrl, fetchJson } from "./lib/api";
 import { JsonView } from "./components/JsonView";
+import { DemoPanel } from "./features/demo/DemoPanel";
+import { RecordSidebar } from "./features/planPreview/RecordSidebar";
+import { TemplatesPanel } from "./features/templates/TemplatesPanel";
 import "./index.css";
 
 const EXAMPLE_URIS = [
@@ -11,6 +14,7 @@ const EXAMPLE_URIS = [
 
 const TAB_STORAGE_KEY = "ftops-ui:tab";
 const RECORD_URI_STORAGE_KEY = "ftops-ui:record-uri";
+const AUTO_RUN_STORAGE_KEY = "ftops-ui:auto-run-preview";
 
 type PlanPreviewState = {
   status?: number;
@@ -47,6 +51,10 @@ export default function App(): JSX.Element {
   const [recordUri, setRecordUri] = useState<string>(() => {
     return localStorage.getItem(RECORD_URI_STORAGE_KEY) || "";
   });
+  const [autoRunOnSelect, setAutoRunOnSelect] = useState<boolean>(() => {
+    const stored = localStorage.getItem(AUTO_RUN_STORAGE_KEY);
+    return stored ? stored === "true" : true;
+  });
 
   const [previewState, setPreviewState] = useState<PlanPreviewState>({});
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -70,18 +78,27 @@ export default function App(): JSX.Element {
     localStorage.setItem(RECORD_URI_STORAGE_KEY, recordUri);
   }, [recordUri]);
 
+  useEffect(() => {
+    localStorage.setItem(AUTO_RUN_STORAGE_KEY, String(autoRunOnSelect));
+  }, [autoRunOnSelect]);
+
   const previewUrl = useMemo(() => {
     if (!recordUri.trim()) return "";
     return buildUrl("/plan/preview", { record_uri: recordUri.trim() });
   }, [recordUri]);
 
-  async function runPreview(): Promise<void> {
-    if (!recordUri.trim()) {
+  async function runPreview(nextUri?: string): Promise<void> {
+    const targetUri = (nextUri ?? recordUri).trim();
+    if (!targetUri) {
       setPreviewState({ error: "Record URI is required." });
       return;
     }
 
-    const url = buildUrl("/plan/preview", { record_uri: recordUri.trim() });
+    if (nextUri !== undefined) {
+      setRecordUri(nextUri);
+    }
+
+    const url = buildUrl("/plan/preview", { record_uri: targetUri });
     setPreviewLoading(true);
     setPreviewState({ url });
 
@@ -252,129 +269,162 @@ export default function App(): JSX.Element {
         >
           Events Viewer
         </button>
+        <button
+          className={activeTab === "demo" ? "active" : ""}
+          onClick={() => setActiveTab("demo")}
+          type="button"
+        >
+          Demo
+        </button>
+        <button
+          className={activeTab === "templates" ? "active" : ""}
+          onClick={() => setActiveTab("templates")}
+          type="button"
+        >
+          Templates
+        </button>
       </nav>
 
       {activeTab === "preview" && (
         <section className="panel">
           <h2>Plan Preview</h2>
-          <div className="form-row">
-            <label htmlFor="record-uri">Record URI</label>
-            <input
-              id="record-uri"
-              type="text"
-              value={recordUri}
-              onChange={(event) => setRecordUri(event.target.value)}
-              placeholder="manual://proposal/demo"
+          <div className="preview-layout">
+            <RecordSidebar
+              selectedUri={recordUri}
+              onSelect={(uri) => {
+                setRecordUri(uri);
+                if (autoRunOnSelect) {
+                  void runPreview(uri);
+                }
+              }}
             />
-          </div>
-
-          <div className="example-row">
-            <span>Example URIs:</span>
-            {EXAMPLE_URIS.map((uri) => (
-              <button
-                key={uri}
-                type="button"
-                onClick={() => setRecordUri(uri)}
-              >
-                {uri}
-              </button>
-            ))}
-          </div>
-
-          <div className="actions">
-            <button
-              type="button"
-              onClick={runPreview}
-              disabled={previewLoading}
-            >
-              {previewLoading ? "Running..." : "Run Preview"}
-            </button>
-            {previewUrl && (
-              <span className="url-hint">{previewUrl}</span>
-            )}
-          </div>
-
-          <div className="results">
-            {previewState.error && (
-              <div className="error">{previewState.error}</div>
-            )}
-
-            {previewState.status !== undefined && (
-              <div className="meta">
-                <div>
-                  <strong>Status:</strong> {previewState.status}
-                </div>
-                <div>
-                  <strong>Duration:</strong> {previewState.durationMs} ms
-                </div>
-                <div>
-                  <strong>Request URL:</strong> {previewState.url}
-                </div>
+            <div className="preview-main">
+              <div className="form-row">
+                <label htmlFor="record-uri">Record URI</label>
+                <input
+                  id="record-uri"
+                  type="text"
+                  value={recordUri}
+                  onChange={(event) => setRecordUri(event.target.value)}
+                  placeholder="manual://proposal/demo"
+                />
               </div>
-            )}
 
-            {planId && (
-              <div className="highlight">
-                <div>
-                  <strong>plan_id:</strong> {planId}
-                </div>
+              <div className="example-row">
+                <span>Example URIs:</span>
+                {EXAMPLE_URIS.map((uri) => (
+                  <button
+                    key={uri}
+                    type="button"
+                    onClick={() => setRecordUri(uri)}
+                  >
+                    {uri}
+                  </button>
+                ))}
+              </div>
+
+              <div className="actions">
                 <button
                   type="button"
-                  onClick={() => copyToClipboard("plan_id", planId)}
+                  onClick={() => runPreview()}
+                  disabled={previewLoading}
                 >
-                  Copy plan_id
+                  {previewLoading ? "Running..." : "Run Preview"}
                 </button>
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={autoRunOnSelect}
+                    onChange={(event) => setAutoRunOnSelect(event.target.checked)}
+                  />
+                  Auto-run on select
+                </label>
+                {previewUrl && <span className="url-hint">{previewUrl}</span>}
               </div>
-            )}
 
-            {warnings && warnings.length > 0 && (
-              <div className="highlight warning">
-                <strong>Warnings:</strong>
-                <ul>
-                  {warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              <div className="results">
+                {previewState.error && (
+                  <div className="error">{previewState.error}</div>
+                )}
 
-            {previewState.data !== undefined && (
-              <div className="json-block">
-                <div className="json-header">
-                  <strong>Response JSON</strong>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      copyToClipboard(
-                        "response JSON",
-                        previewState.text ||
-                          JSON.stringify(previewState.data, null, 2)
-                      )
-                    }
-                  >
-                    Copy JSON
-                  </button>
-                </div>
-                <JsonView data={previewState.data} />
-              </div>
-            )}
+                {previewState.status !== undefined && (
+                  <div className="meta">
+                    <div>
+                      <strong>Status:</strong> {previewState.status}
+                    </div>
+                    <div>
+                      <strong>Duration:</strong> {previewState.durationMs} ms
+                    </div>
+                    <div>
+                      <strong>Request URL:</strong> {previewState.url}
+                    </div>
+                  </div>
+                )}
 
-            {previewState.data === undefined && previewState.text && (
-              <div className="json-block">
-                <div className="json-header">
-                  <strong>Response Text</strong>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      copyToClipboard("response text", previewState.text || "")
-                    }
-                  >
-                    Copy text
-                  </button>
-                </div>
-                <pre>{previewState.text}</pre>
+                {planId && (
+                  <div className="highlight">
+                    <div>
+                      <strong>plan_id:</strong> {planId}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard("plan_id", planId)}
+                    >
+                      Copy plan_id
+                    </button>
+                  </div>
+                )}
+
+                {warnings && warnings.length > 0 && (
+                  <div className="highlight warning">
+                    <strong>Warnings:</strong>
+                    <ul>
+                      {warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {previewState.data !== undefined && (
+                  <div className="json-block">
+                    <div className="json-header">
+                      <strong>Response JSON</strong>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyToClipboard(
+                            "response JSON",
+                            previewState.text ||
+                              JSON.stringify(previewState.data, null, 2)
+                          )
+                        }
+                      >
+                        Copy JSON
+                      </button>
+                    </div>
+                    <JsonView data={previewState.data} />
+                  </div>
+                )}
+
+                {previewState.data === undefined && previewState.text && (
+                  <div className="json-block">
+                    <div className="json-header">
+                      <strong>Response Text</strong>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyToClipboard("response text", previewState.text || "")
+                        }
+                      >
+                        Copy text
+                      </button>
+                    </div>
+                    <pre>{previewState.text}</pre>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </section>
       )}
@@ -390,9 +440,7 @@ export default function App(): JSX.Element {
             >
               {eventsLoading ? "Refreshing..." : "Refresh"}
             </button>
-            {eventsState.url && (
-              <span className="url-hint">{eventsState.url}</span>
-            )}
+            {eventsState.url && <span className="url-hint">{eventsState.url}</span>}
           </div>
 
           <div className="results">
@@ -439,9 +487,7 @@ export default function App(): JSX.Element {
                         key={index}
                         className={isExpanded ? "expanded" : ""}
                         onClick={() =>
-                          setExpandedRowIndex(
-                            isExpanded ? null : index
-                          )
+                          setExpandedRowIndex(isExpanded ? null : index)
                         }
                       >
                         <td>{String(row.source ?? "")}</td>
@@ -457,8 +503,7 @@ export default function App(): JSX.Element {
               </table>
             </div>
 
-            {expandedRowIndex !== null &&
-              events[expandedRowIndex] !== undefined && (
+            {expandedRowIndex !== null && events[expandedRowIndex] !== undefined && (
               <div className="json-block">
                 <div className="json-header">
                   <strong>Event Details</strong>
@@ -516,9 +561,7 @@ export default function App(): JSX.Element {
               >
                 {testLoading ? "Sending..." : "Send Test Event"}
               </button>
-              {testState.url && (
-                <span className="url-hint">{testState.url}</span>
-              )}
+              {testState.url && <span className="url-hint">{testState.url}</span>}
             </div>
 
             {testState.error && <div className="error">{testState.error}</div>}
@@ -568,6 +611,19 @@ export default function App(): JSX.Element {
               </div>
             )}
           </div>
+        </section>
+      )}
+
+      {activeTab === "demo" && (
+        <section className="panel">
+          <DemoPanel />
+        </section>
+      )}
+
+      {activeTab === "templates" && (
+        <section className="panel">
+          <h2>Templates</h2>
+          <TemplatesPanel />
         </section>
       )}
     </div>
