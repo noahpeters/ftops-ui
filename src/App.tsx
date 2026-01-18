@@ -5,7 +5,9 @@ import { JsonView } from "./components/JsonView";
 import { DemoPanel } from "./features/demo/DemoPanel";
 import { ContextViewer } from "./features/planPreview/ContextViewer";
 import { RecordSidebar } from "./features/planPreview/RecordSidebar";
+import { ProjectsPanel } from "./features/projects/ProjectsPanel";
 import { TemplatesPanel } from "./features/templates/TemplatesPanel";
+import { createProjectFromRecord, materializeProject } from "./features/projects/api";
 import "./index.css";
 
 const EXAMPLE_URIS = [
@@ -17,6 +19,8 @@ const EXAMPLE_URIS = [
 const TAB_STORAGE_KEY = "ftops-ui:tab";
 const RECORD_URI_STORAGE_KEY = "ftops-ui:record-uri";
 const AUTO_RUN_STORAGE_KEY = "ftops-ui:auto-run-preview";
+const DEBUG_EMAIL_STORAGE_KEY = "ftops-ui:debug-email";
+const PROJECT_STORAGE_KEY = "ftops-ui:project-id";
 
 type PlanPreviewState = {
   status?: number;
@@ -60,6 +64,10 @@ export default function App(): JSX.Element {
 
   const [previewState, setPreviewState] = useState<PlanPreviewState>({});
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [materializeMessage, setMaterializeMessage] = useState<string | null>(
+    null
+  );
+  const [materializeLoading, setMaterializeLoading] = useState(false);
 
   const [eventsState, setEventsState] = useState<EventsState>({});
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -71,6 +79,13 @@ export default function App(): JSX.Element {
   const [testPayload, setTestPayload] = useState("{\n  \"hello\": \"world\"\n}");
   const [testState, setTestState] = useState<EventsTestState>({});
   const [testLoading, setTestLoading] = useState(false);
+
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() => {
+    return localStorage.getItem(PROJECT_STORAGE_KEY);
+  });
+  const [debugEmail, setDebugEmail] = useState<string>(() => {
+    return localStorage.getItem(DEBUG_EMAIL_STORAGE_KEY) || "";
+  });
 
   useEffect(() => {
     localStorage.setItem(TAB_STORAGE_KEY, activeTab);
@@ -84,10 +99,44 @@ export default function App(): JSX.Element {
     localStorage.setItem(AUTO_RUN_STORAGE_KEY, String(autoRunOnSelect));
   }, [autoRunOnSelect]);
 
+  useEffect(() => {
+    if (selectedProjectId) {
+      localStorage.setItem(PROJECT_STORAGE_KEY, selectedProjectId);
+    } else {
+      localStorage.removeItem(PROJECT_STORAGE_KEY);
+    }
+  }, [selectedProjectId]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    localStorage.setItem(DEBUG_EMAIL_STORAGE_KEY, debugEmail);
+  }, [debugEmail]);
+
   const previewUrl = useMemo(() => {
     if (!recordUri.trim()) return "";
     return buildUrl("/plan/preview", { record_uri: recordUri.trim() });
   }, [recordUri]);
+
+  const contextLookup = useMemo(() => {
+    if (!previewState.data || typeof previewState.data !== "object") {
+      return {};
+    }
+    const contexts = (
+      previewState.data as {
+        contexts?: { deliverables?: Array<{ key: string; title?: string | null }> };
+      }
+    ).contexts;
+    const deliverables = contexts?.deliverables ?? [];
+    return deliverables.reduce<Record<string, { title?: string | null }>>(
+      (acc, deliverable) => {
+        if (deliverable?.key) {
+          acc[deliverable.key] = { title: deliverable.title ?? null };
+        }
+        return acc;
+      },
+      {}
+    );
+  }, [previewState.data]);
 
   async function runPreview(nextUri?: string): Promise<void> {
     const targetUri = (nextUri ?? recordUri).trim();
@@ -126,6 +175,50 @@ export default function App(): JSX.Element {
       });
     } finally {
       setPreviewLoading(false);
+    }
+  }
+
+  async function materializeTasks(): Promise<void> {
+    const uri = recordUri.trim();
+    if (!uri) {
+      setMaterializeMessage("Record URI is required.");
+      return;
+    }
+    setMaterializeLoading(true);
+    setMaterializeMessage(null);
+
+    try {
+      const projectResult = await createProjectFromRecord(uri);
+      if (!projectResult.ok || !projectResult.data) {
+        setMaterializeMessage(
+          projectResult.text || "Failed to create project."
+        );
+        return;
+      }
+
+      const projectId = projectResult.data.project.id;
+      const materializeResult = await materializeProject(projectId);
+      if (!materializeResult.ok || !materializeResult.data) {
+        setMaterializeMessage(
+          materializeResult.text || "Failed to materialize tasks."
+        );
+        return;
+      }
+
+      const { alreadyMaterialized, tasksCreated } = materializeResult.data;
+      setMaterializeMessage(
+        alreadyMaterialized
+          ? "Already materialized (no changes)."
+          : `Created ${tasksCreated} tasks.`
+      );
+      setSelectedProjectId(projectId);
+      setActiveTab("projects");
+    } catch (error) {
+      setMaterializeMessage(
+        error instanceof Error ? error.message : "Materialize failed."
+      );
+    } finally {
+      setMaterializeLoading(false);
     }
   }
 
@@ -254,6 +347,18 @@ export default function App(): JSX.Element {
           <h1>ftops internal UI</h1>
           <p>Plan preview + events viewer for ftops endpoints.</p>
         </div>
+        {import.meta.env.DEV && (
+          <div className="dev-identity">
+            <label htmlFor="debug-email">Dev identity</label>
+            <input
+              id="debug-email"
+              type="email"
+              placeholder="you@example.com"
+              value={debugEmail}
+              onChange={(event) => setDebugEmail(event.target.value)}
+            />
+          </div>
+        )}
       </header>
       <DevMigrationBanner />
 
@@ -285,6 +390,13 @@ export default function App(): JSX.Element {
           type="button"
         >
           Templates
+        </button>
+        <button
+          className={activeTab === "projects" ? "active" : ""}
+          onClick={() => setActiveTab("projects")}
+          type="button"
+        >
+          Projects
         </button>
       </nav>
 
@@ -334,6 +446,16 @@ export default function App(): JSX.Element {
                 >
                   {previewLoading ? "Running..." : "Run Preview"}
                 </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={materializeTasks}
+                  disabled={materializeLoading || !recordUri.trim()}
+                >
+                  {materializeLoading
+                    ? "Materializing..."
+                    : "Create Project + Materialize Tasks"}
+                </button>
                 <label className="checkbox">
                   <input
                     type="checkbox"
@@ -344,6 +466,12 @@ export default function App(): JSX.Element {
                 </label>
                 {previewUrl && <span className="url-hint">{previewUrl}</span>}
               </div>
+
+              {materializeMessage && (
+                <div className="highlight">
+                  <strong>Materialize:</strong> {materializeMessage}
+                </div>
+              )}
 
               <div className="results">
                 {previewState.error && (
@@ -630,6 +758,14 @@ export default function App(): JSX.Element {
           <h2>Templates</h2>
           <TemplatesPanel />
         </section>
+      )}
+
+      {activeTab === "projects" && (
+        <ProjectsPanel
+          selectedProjectId={selectedProjectId}
+          onSelectProject={setSelectedProjectId}
+          contextLookup={contextLookup}
+        />
       )}
     </div>
   );

@@ -37,11 +37,24 @@ export async function fetchJson<T>(
   let response: Response;
   let text = "";
   let data: T | null = null;
+  const headers = new Headers(init.headers || {});
+
+  if (import.meta.env.DEV) {
+    try {
+      const debugEmail = localStorage.getItem("ftops-ui:debug-email");
+      if (debugEmail) {
+        headers.set("X-Debug-User-Email", debugEmail);
+      }
+    } catch {
+      // ignore localStorage access errors
+    }
+  }
 
   try {
     response = await fetch(url, {
       ...init,
       credentials: "include",
+      headers,
     });
   } catch (error) {
     throw new Error(
