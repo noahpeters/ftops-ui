@@ -8,6 +8,10 @@ import { RecordSidebar } from "./features/planPreview/RecordSidebar";
 import { ProjectsPanel } from "./features/projects/ProjectsPanel";
 import { TemplatesPanel } from "./features/templates/TemplatesPanel";
 import { createProjectFromRecord, materializeProject } from "./features/projects/api";
+import { IntegrationsPanel } from "./features/integrations/IntegrationsPanel";
+import { IngestPanel } from "./features/ingest/IngestPanel";
+import { listWorkspaces, type WorkspaceRow } from "./features/workspaces/api";
+import { WorkspacesPanel } from "./features/workspaces/WorkspacesPanel";
 import "./index.css";
 
 const EXAMPLE_URIS = [
@@ -21,6 +25,7 @@ const RECORD_URI_STORAGE_KEY = "ftops-ui:record-uri";
 const AUTO_RUN_STORAGE_KEY = "ftops-ui:auto-run-preview";
 const DEBUG_EMAIL_STORAGE_KEY = "ftops-ui:debug-email";
 const PROJECT_STORAGE_KEY = "ftops-ui:project-id";
+const WORKSPACE_STORAGE_KEY = "ftops-ui:workspace-id";
 
 type PlanPreviewState = {
   status?: number;
@@ -86,6 +91,11 @@ export default function App(): JSX.Element {
   const [debugEmail, setDebugEmail] = useState<string>(() => {
     return localStorage.getItem(DEBUG_EMAIL_STORAGE_KEY) || "";
   });
+  const [workspaces, setWorkspaces] = useState<WorkspaceRow[]>([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
+    () => localStorage.getItem(WORKSPACE_STORAGE_KEY)
+  );
 
   useEffect(() => {
     localStorage.setItem(TAB_STORAGE_KEY, activeTab);
@@ -111,6 +121,34 @@ export default function App(): JSX.Element {
     if (!import.meta.env.DEV) return;
     localStorage.setItem(DEBUG_EMAIL_STORAGE_KEY, debugEmail);
   }, [debugEmail]);
+
+  useEffect(() => {
+    if (selectedWorkspaceId) {
+      localStorage.setItem(WORKSPACE_STORAGE_KEY, selectedWorkspaceId);
+    }
+  }, [selectedWorkspaceId]);
+
+  useEffect(() => {
+    void refreshWorkspaces();
+  }, []);
+
+  async function refreshWorkspaces() {
+    setWorkspaceLoading(true);
+    const result = await listWorkspaces();
+    if (result.ok && result.data) {
+      setWorkspaces(result.data);
+      const exists = selectedWorkspaceId
+        ? result.data.some((workspace) => workspace.id === selectedWorkspaceId)
+        : false;
+      if (!exists) {
+        const fallback =
+          result.data.find((workspace) => workspace.slug === "default") ??
+          result.data[0];
+        setSelectedWorkspaceId(fallback?.id ?? null);
+      }
+    }
+    setWorkspaceLoading(false);
+  }
 
   const previewUrl = useMemo(() => {
     if (!recordUri.trim()) return "";
@@ -347,18 +385,35 @@ export default function App(): JSX.Element {
           <h1>ftops internal UI</h1>
           <p>Plan preview + events viewer for ftops endpoints.</p>
         </div>
-        {import.meta.env.DEV && (
-          <div className="dev-identity">
-            <label htmlFor="debug-email">Dev identity</label>
-            <input
-              id="debug-email"
-              type="email"
-              placeholder="you@example.com"
-              value={debugEmail}
-              onChange={(event) => setDebugEmail(event.target.value)}
-            />
+        <div className="header-controls">
+          <div className="workspace-select">
+            <label htmlFor="workspace-select">Workspace</label>
+            <select
+              id="workspace-select"
+              value={selectedWorkspaceId ?? ""}
+              onChange={(event) => setSelectedWorkspaceId(event.target.value)}
+              disabled={workspaceLoading}
+            >
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+          {import.meta.env.DEV && (
+            <div className="dev-identity">
+              <label htmlFor="debug-email">Dev identity</label>
+              <input
+                id="debug-email"
+                type="email"
+                placeholder="you@example.com"
+                value={debugEmail}
+                onChange={(event) => setDebugEmail(event.target.value)}
+              />
+            </div>
+          )}
+        </div>
       </header>
       <DevMigrationBanner />
 
@@ -397,6 +452,27 @@ export default function App(): JSX.Element {
           type="button"
         >
           Projects
+        </button>
+        <button
+          className={activeTab === "integrations" ? "active" : ""}
+          onClick={() => setActiveTab("integrations")}
+          type="button"
+        >
+          Integrations
+        </button>
+        <button
+          className={activeTab === "ingest" ? "active" : ""}
+          onClick={() => setActiveTab("ingest")}
+          type="button"
+        >
+          Ingest
+        </button>
+        <button
+          className={activeTab === "workspaces" ? "active" : ""}
+          onClick={() => setActiveTab("workspaces")}
+          type="button"
+        >
+          Workspaces
         </button>
       </nav>
 
@@ -765,6 +841,24 @@ export default function App(): JSX.Element {
           selectedProjectId={selectedProjectId}
           onSelectProject={setSelectedProjectId}
           contextLookup={contextLookup}
+        />
+      )}
+
+      {activeTab === "integrations" && (
+        <IntegrationsPanel
+          workspaceId={selectedWorkspaceId}
+          workspaces={workspaces}
+        />
+      )}
+
+      {activeTab === "ingest" && (
+        <IngestPanel workspaceId={selectedWorkspaceId} workspaces={workspaces} />
+      )}
+
+      {activeTab === "workspaces" && (
+        <WorkspacesPanel
+          selectedWorkspaceId={selectedWorkspaceId}
+          onSelectWorkspace={setSelectedWorkspaceId}
         />
       )}
     </div>

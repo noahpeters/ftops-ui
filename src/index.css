@@ -37,6 +37,38 @@ body {
   min-width: 220px;
 }
 
+.header-controls {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.workspace-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  width: min(520px, 100%);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
 h1 {
   margin: 0 0 4px;
   font-size: 28px;
@@ -382,6 +414,34 @@ p {
   gap: 8px;
   font-size: 12px;
   color: #666;
+}
+
+.ingest-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.ingest-list table {
+  width: 100%;
+}
+
+.ingest-list tr {
+  cursor: pointer;
+}
+
+.ingest-detail pre {
+  background: #f7f7f7;
+  padding: 12px;
+  border-radius: 6px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .ingest-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
