@@ -7,7 +7,6 @@ import {
   deleteTemplate,
   getTemplate,
   listTemplates,
-  replaceSteps,
   updateRule,
   updateTemplate,
 } from "./api";
@@ -17,6 +16,8 @@ const TEMPLATE_SELECTED_KEY = "ftops-ui:templates:selected";
 const TEMPLATE_SEARCH_KEY = "ftops-ui:templates:search";
 
 const EMPTY_RULE_JSON = "{\n  \"attach_to\": \"project\"\n}";
+
+const TEMPLATE_KINDS = ["task", "checklist", "milestone"] as const;
 
 type TemplatesState = {
   status?: number;
@@ -42,28 +43,19 @@ type RuleEditState = {
   match_json: string;
 };
 
-type StepDraft = {
-  step_key: string;
-  title: string;
-  kind: string;
-  is_active: boolean;
-};
-
 type TemplateFormState = {
   title: string;
+  kind: string;
   scope: string;
   category_key: string;
   deliverable_key: string;
+  default_position: string;
+  default_state_json: string;
   is_active: boolean;
 };
 
-type NewTemplateFormState = {
+type NewTemplateFormState = TemplateFormState & {
   key: string;
-  title: string;
-  scope: string;
-  category_key: string;
-  deliverable_key: string;
-  is_active: boolean;
 };
 
 export function TemplatesPanel(): JSX.Element {
@@ -83,9 +75,12 @@ export function TemplatesPanel(): JSX.Element {
 
   const [templateForm, setTemplateForm] = useState<TemplateFormState>({
     title: "",
+    kind: "task",
     scope: "project",
     category_key: "",
     deliverable_key: "",
+    default_position: "",
+    default_state_json: "",
     is_active: true,
   });
 
@@ -96,15 +91,16 @@ export function TemplatesPanel(): JSX.Element {
   });
   const [ruleEdits, setRuleEdits] = useState<Record<string, RuleEditState>>({});
 
-  const [stepsDraft, setStepsDraft] = useState<StepDraft[]>([]);
-
   const [showNewTemplateModal, setShowNewTemplateModal] = useState(false);
   const [newTemplateForm, setNewTemplateForm] = useState<NewTemplateFormState>({
     key: "",
     title: "",
+    kind: "task",
     scope: "project",
     category_key: "",
     deliverable_key: "",
+    default_position: "",
+    default_state_json: "",
     is_active: true,
   });
 
@@ -114,7 +110,6 @@ export function TemplatesPanel(): JSX.Element {
   const [creatingRule, setCreatingRule] = useState(false);
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
   const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
-  const [savingSteps, setSavingSteps] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(TEMPLATE_SELECTED_KEY, selectedTemplateKey);
@@ -145,9 +140,15 @@ export function TemplatesPanel(): JSX.Element {
     const template = templateDetailState.data.template;
     setTemplateForm({
       title: template.title ?? "",
+      kind: template.kind ?? "task",
       scope: template.scope ?? "project",
       category_key: template.category_key ?? "",
       deliverable_key: template.deliverable_key ?? "",
+      default_position:
+        template.default_position !== null && template.default_position !== undefined
+          ? String(template.default_position)
+          : "",
+      default_state_json: template.default_state_json ?? "",
       is_active: Boolean(template.is_active),
     });
 
@@ -160,17 +161,6 @@ export function TemplatesPanel(): JSX.Element {
       };
     }
     setRuleEdits(nextRuleEdits);
-
-    const nextSteps = (templateDetailState.data.steps ?? [])
-      .slice()
-      .sort((a, b) => a.position - b.position)
-      .map((step) => ({
-        step_key: step.step_key,
-        title: step.title,
-        kind: step.kind,
-        is_active: Boolean(step.is_active),
-      }));
-    setStepsDraft(nextSteps);
   }, [templateDetailState.data]);
 
   const templates = templatesState.data ?? [];
@@ -234,14 +224,24 @@ export function TemplatesPanel(): JSX.Element {
       setActionError("Template key and title are required.");
       return;
     }
+
+    const defaultState = parseJsonOrError(newTemplateForm.default_state_json);
+    if (defaultState.error) {
+      setActionError("Default state JSON must be valid.");
+      return;
+    }
+
     setCreatingTemplate(true);
     setActionError(null);
     const result = await createTemplate({
       key: newTemplateForm.key.trim(),
       title: newTemplateForm.title.trim(),
+      kind: newTemplateForm.kind,
       scope: newTemplateForm.scope,
       category_key: newTemplateForm.category_key || undefined,
       deliverable_key: newTemplateForm.deliverable_key || undefined,
+      default_state_json: defaultState.value,
+      default_position: normalizePosition(newTemplateForm.default_position),
       is_active: newTemplateForm.is_active,
     });
 
@@ -255,9 +255,12 @@ export function TemplatesPanel(): JSX.Element {
     setNewTemplateForm({
       key: "",
       title: "",
+      kind: "task",
       scope: "project",
       category_key: "",
       deliverable_key: "",
+      default_position: "",
+      default_state_json: "",
       is_active: true,
     });
 
@@ -279,13 +282,23 @@ export function TemplatesPanel(): JSX.Element {
     if (!templateDetail?.template?.key) {
       return;
     }
+
+    const defaultState = parseJsonOrError(templateForm.default_state_json);
+    if (defaultState.error) {
+      setActionError("Default state JSON must be valid.");
+      return;
+    }
+
     setSavingTemplate(true);
     setActionError(null);
     const result = await updateTemplate(templateDetail.template.key, {
       title: templateForm.title,
+      kind: templateForm.kind,
       scope: templateForm.scope,
       category_key: templateForm.category_key || null,
       deliverable_key: templateForm.deliverable_key || null,
+      default_state_json: defaultState.value,
+      default_position: normalizePosition(templateForm.default_position),
       is_active: templateForm.is_active,
     });
 
@@ -426,71 +439,6 @@ export function TemplatesPanel(): JSX.Element {
     }));
   }
 
-  function updateStep(index: number, patch: Partial<StepDraft>) {
-    setStepsDraft((prev) =>
-      prev.map((step, idx) => (idx === index ? { ...step, ...patch } : step))
-    );
-  }
-
-  function moveStep(index: number, direction: -1 | 1) {
-    setStepsDraft((prev) => {
-      const next = prev.slice();
-      const targetIndex = index + direction;
-      if (targetIndex < 0 || targetIndex >= next.length) {
-        return prev;
-      }
-      const [item] = next.splice(index, 1);
-      next.splice(targetIndex, 0, item);
-      return next;
-    });
-  }
-
-  function addStep() {
-    setStepsDraft((prev) => [
-      ...prev,
-      { step_key: "", title: "", kind: "task", is_active: true },
-    ]);
-  }
-
-  function removeStep(index: number) {
-    setStepsDraft((prev) => prev.filter((_, idx) => idx !== index));
-  }
-
-  async function handleSaveSteps(): Promise<void> {
-    if (!templateDetail?.template?.key) {
-      return;
-    }
-    setSavingSteps(true);
-    setActionError(null);
-
-    const payloadSteps = stepsDraft.map((step, index) => ({
-      step_key: step.step_key.trim(),
-      title: step.title.trim(),
-      kind: step.kind.trim(),
-      is_active: step.is_active,
-      position: index + 1,
-    }));
-
-    if (payloadSteps.some((step) => !step.step_key || !step.title || !step.kind)) {
-      setActionError("All steps require step_key, title, and kind.");
-      setSavingSteps(false);
-      return;
-    }
-
-    const result = await replaceSteps(templateDetail.template.key, {
-      steps: payloadSteps,
-    });
-
-    if (!result.ok) {
-      setActionError(formatApiError(result, "Failed to update steps."));
-      setSavingSteps(false);
-      return;
-    }
-
-    await loadTemplateDetail(templateDetail.template.key);
-    setSavingSteps(false);
-  }
-
   return (
     <div className="templates-panel">
       <div className="templates-toolbar">
@@ -546,7 +494,7 @@ export function TemplatesPanel(): JSX.Element {
                 <div className="template-meta">
                   <span>{template.title}</span>
                   <span>
-                    {template.scope}
+                    {template.kind} · {template.scope}
                     {template.category_key
                       ? ` · ${template.category_key}`
                       : ""}
@@ -612,6 +560,24 @@ export function TemplatesPanel(): JSX.Element {
                     />
                   </label>
                   <label>
+                    Kind
+                    <select
+                      value={templateForm.kind}
+                      onChange={(event) =>
+                        setTemplateForm((prev) => ({
+                          ...prev,
+                          kind: event.target.value,
+                        }))
+                      }
+                    >
+                      {TEMPLATE_KINDS.map((kind) => (
+                        <option key={kind} value={kind}>
+                          {kind}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
                     Scope
                     <select
                       value={templateForm.scope}
@@ -653,6 +619,19 @@ export function TemplatesPanel(): JSX.Element {
                       }
                     />
                   </label>
+                  <label>
+                    Default Position
+                    <input
+                      type="number"
+                      value={templateForm.default_position}
+                      onChange={(event) =>
+                        setTemplateForm((prev) => ({
+                          ...prev,
+                          default_position: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
                   <label className="checkbox">
                     <input
                       type="checkbox"
@@ -667,6 +646,20 @@ export function TemplatesPanel(): JSX.Element {
                     Active
                   </label>
                 </div>
+
+                <details className="panel-advanced">
+                  <summary>Advanced: Default State JSON</summary>
+                  <textarea
+                    rows={6}
+                    value={templateForm.default_state_json}
+                    onChange={(event) =>
+                      setTemplateForm((prev) => ({
+                        ...prev,
+                        default_state_json: event.target.value,
+                      }))
+                    }
+                  />
+                </details>
 
                 <div className="actions">
                   <button
@@ -814,89 +807,6 @@ export function TemplatesPanel(): JSX.Element {
               </section>
 
               <section className="panel-sub">
-                <h3>Steps</h3>
-                <div className="steps-list">
-                  {stepsDraft.length === 0 && (
-                    <div className="empty">No steps yet.</div>
-                  )}
-                  {stepsDraft.map((step, index) => (
-                    <div key={`${step.step_key}-${index}`} className="step-row">
-                      <div className="step-actions">
-                        <button type="button" onClick={() => moveStep(index, -1)}>
-                          Up
-                        </button>
-                        <button type="button" onClick={() => moveStep(index, 1)}>
-                          Down
-                        </button>
-                        <button
-                          type="button"
-                          className="danger"
-                          onClick={() => removeStep(index)}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                      <div className="step-fields">
-                        <label>
-                          Step Key
-                          <input
-                            type="text"
-                            value={step.step_key}
-                            onChange={(event) =>
-                              updateStep(index, { step_key: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Title
-                          <input
-                            type="text"
-                            value={step.title}
-                            onChange={(event) =>
-                              updateStep(index, { title: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Kind
-                          <input
-                            type="text"
-                            value={step.kind}
-                            onChange={(event) =>
-                              updateStep(index, { kind: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label className="checkbox">
-                          <input
-                            type="checkbox"
-                            checked={step.is_active}
-                            onChange={(event) =>
-                              updateStep(index, { is_active: event.target.checked })
-                            }
-                          />
-                          Active
-                        </label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="actions">
-                  <button type="button" onClick={addStep}>
-                    Add Step
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveSteps}
-                    disabled={savingSteps}
-                  >
-                    {savingSteps ? "Saving..." : "Save Steps"}
-                  </button>
-                </div>
-              </section>
-
-              <section className="panel-sub">
                 <h3>Raw JSON</h3>
                 <div className="json-block">
                   <JsonView data={templateDetail} />
@@ -937,6 +847,24 @@ export function TemplatesPanel(): JSX.Element {
                     }))
                   }
                 />
+              </label>
+              <label>
+                Kind
+                <select
+                  value={newTemplateForm.kind}
+                  onChange={(event) =>
+                    setNewTemplateForm((prev) => ({
+                      ...prev,
+                      kind: event.target.value,
+                    }))
+                  }
+                >
+                  {TEMPLATE_KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {kind}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 Scope
@@ -984,6 +912,19 @@ export function TemplatesPanel(): JSX.Element {
                   </label>
                 </>
               )}
+              <label>
+                Default Position
+                <input
+                  type="number"
+                  value={newTemplateForm.default_position}
+                  onChange={(event) =>
+                    setNewTemplateForm((prev) => ({
+                      ...prev,
+                      default_position: event.target.value,
+                    }))
+                  }
+                />
+              </label>
               <label className="checkbox">
                 <input
                   type="checkbox"
@@ -998,6 +939,19 @@ export function TemplatesPanel(): JSX.Element {
                 Active
               </label>
             </div>
+            <details className="panel-advanced">
+              <summary>Advanced: Default State JSON</summary>
+              <textarea
+                rows={6}
+                value={newTemplateForm.default_state_json}
+                onChange={(event) =>
+                  setNewTemplateForm((prev) => ({
+                    ...prev,
+                    default_state_json: event.target.value,
+                  }))
+                }
+              />
+            </details>
             <div className="actions">
               <button
                 type="button"
@@ -1046,4 +1000,23 @@ function getAttachTo(matchJson: string) {
   } catch {
     return "";
   }
+}
+
+function parseJsonOrError(value: string) {
+  if (!value.trim()) {
+    return { value: null, error: false };
+  }
+  try {
+    return { value: JSON.parse(value), error: false };
+  } catch {
+    return { value: null, error: true };
+  }
+}
+
+function normalizePosition(value: string) {
+  if (!value.trim()) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : null;
 }

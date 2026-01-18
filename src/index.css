@@ -50,6 +50,19 @@ p {
   margin: 20px 0;
 }
 
+.dev-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #c17c1a;
+  background: #fff6e4;
+  color: #5d3c00;
+  font-size: 13px;
+}
+
 .tabs button {
   border: 1px solid #b8b8b8;
   background: #fff;
@@ -569,6 +582,22 @@ pre {
   font-family: "Source Code Pro", "Courier New", monospace;
   font-size: 12px;
 }
+
+
+.panel-advanced {
+  border: 1px dashed #d2d2d2;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fafafa;
+}
+
+.panel-advanced summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #444;
+  margin-bottom: 8px;
+}
+
 
 @media (max-width: 720px) {
   .app {

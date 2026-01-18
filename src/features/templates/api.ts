@@ -3,10 +3,13 @@ import { buildUrl, fetchJson } from "../../lib/api";
 export type TemplateListItem = {
   key: string;
   title: string;
+  kind: string;
   scope: string;
   is_active: number;
   category_key: string | null;
   deliverable_key: string | null;
+  default_state_json: string | null;
+  default_position: number | null;
 };
 
 export type TemplateRule = {
@@ -18,17 +21,6 @@ export type TemplateRule = {
   match?: unknown;
 };
 
-export type TemplateStep = {
-  id: string;
-  template_key: string;
-  position: number;
-  step_key: string;
-  title: string;
-  kind: string;
-  default_state_json: string | null;
-  is_active: number;
-};
-
 export type TemplateDetail = {
   template: TemplateListItem & {
     id?: string;
@@ -37,23 +29,28 @@ export type TemplateDetail = {
     updated_at?: string;
   };
   rules: TemplateRule[];
-  steps: TemplateStep[];
 };
 
 export type CreateTemplateInput = {
   key: string;
   title: string;
+  kind: string;
   scope: string;
   category_key?: string | null;
   deliverable_key?: string | null;
+  default_state_json?: string | object | null;
+  default_position?: number | null;
   is_active?: boolean;
 };
 
 export type UpdateTemplateInput = {
   title?: string;
+  kind?: string;
   scope?: string;
   category_key?: string | null;
   deliverable_key?: string | null;
+  default_state_json?: string | object | null;
+  default_position?: number | null;
   is_active?: boolean;
 };
 
@@ -67,17 +64,6 @@ export type UpdateRuleInput = {
   priority?: number;
   match_json?: string;
   is_active?: boolean;
-};
-
-export type ReplaceStepsInput = {
-  steps: Array<{
-    step_key: string;
-    title: string;
-    kind: string;
-    is_active?: boolean;
-    default_state_json?: string | null;
-    position?: number;
-  }>;
 };
 
 export function listTemplates() {
@@ -145,16 +131,5 @@ export function deleteRule(templateKey: string, ruleId: string) {
   return fetchJson<{ deleted: boolean }>(
     buildUrl(`/templates/${encodeURIComponent(templateKey)}/rules/${ruleId}`),
     { method: "DELETE" }
-  );
-}
-
-export function replaceSteps(templateKey: string, body: ReplaceStepsInput) {
-  return fetchJson<{ steps: TemplateStep[] }>(
-    buildUrl(`/templates/${encodeURIComponent(templateKey)}/steps`),
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }
   );
 }

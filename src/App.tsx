@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { buildUrl, fetchJson } from "./lib/api";
+import { DevMigrationBanner } from "./components/DevMigrationBanner";
 import { JsonView } from "./components/JsonView";
 import { DemoPanel } from "./features/demo/DemoPanel";
 import { RecordSidebar } from "./features/planPreview/RecordSidebar";
@@ -253,6 +254,7 @@ export default function App(): JSX.Element {
           <p>Plan preview + events viewer for ftops endpoints.</p>
         </div>
       </header>
+      <DevMigrationBanner />
 
       <nav className="tabs">
         <button
